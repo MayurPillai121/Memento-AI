@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Meme Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://unpkg.com/lucide-static/font/lucide.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="min-h-screen bg-black relative overflow-y-scroll">
+    <!-- Decorative Background Elements -->
+    <div class="absolute inset-0 pointer-events-none">
+        <i class="icon-lightbulb absolute text-purple-500/20 h-12 w-12 left-[15%] top-[20%] transform -rotate-12"></i>
+        <i class="icon-stars absolute text-purple-500/20 h-8 w-8 left-[8%] top-[35%]"></i>
+        <i class="icon-wand2 absolute text-purple-500/20 h-10 w-10 right-[12%] top-[15%] transform rotate-45"></i>
+        <i class="icon-zap absolute text-purple-500/20 h-8 w-8 right-[25%] top-[40%]"></i>
+        <i class="icon-stars absolute text-purple-500/20 h-6 w-6 left-[30%] top-[10%]"></i>
+        <i class="icon-sparkles absolute text-purple-500/20 h-8 w-8 right-[15%] top-[25%]"></i>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="p-4 relative">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="icon-sparkles h-6 w-6 text-purple-500"></i>
+                <span class="text-2xl font-bold text-white">Memento AI</span>
+            </div>
+            <div class="flex space-x-4 items-center">
+                {% if session.get('user') %}
+                    <div class="relative">
+                        <button onclick="toggleDropdown()" class="w-10 h-10 rounded-full bg-purple-600 text-white flex items-center justify-center hover:bg-purple-700 transition-colors" id="user-menu-button">
+                            {{ session.user.email[:2].upper() }}
+                        </button>
+                        <!-- Simplified dropdown menu -->
+                        <div id="dropdown-menu" class="hidden absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-gray-900 ring-1 ring-black ring-opacity-5 z-50">
+                            <div class="px-4 py-3 border-b border-gray-700">
+                                <p class="text-sm text-white truncate">{{ session.user.email }}</p>
+                            </div>
+                            <div class="py-1">
+                                <form action="{{ url_for('signout') }}" method="get" class="block">
+                                    <button type="submit" class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800">Sign out</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <a href="/auth" class="px-6 py-2 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors">Sign In / Sign Up</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    <div class="max-w-7xl mx-auto px-4 mt-4">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="bg-gray-900/80 text-white px-6 py-4 rounded-lg mb-4 flex justify-between items-center">
+                        <span>{{ message }}</span>
+                        <button onclick="this.parentElement.remove()" class="text-gray-400 hover:text-white">×</button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 pt-16 pb-24 relative">
+        <div class="text-center mb-16">
+            <h1 class="text-5xl font-bold text-white mb-6">Best AI for Meme Generation</h1>
+            <p class="text-xl text-gray-300">Experience the magic of transformation! Upload any image and watch Memento AI work its charm.</p>
+        </div>
+
+        <!-- Upload and Preview Section -->
+        <div class="grid md:grid-cols-2 gap-8">
+            <!-- Upload Section -->
+            <div class="bg-gray-900/80 backdrop-blur-sm p-6 rounded-2xl border border-gray-800">
+                <h3 class="text-lg font-semibold mb-4 text-gray-200 flex items-center">
+                    <i class="icon-upload h-5 w-5 mr-2 text-purple-500"></i>
+                    UPLOAD YOUR IMAGE
+                </h3>
+                <form id="upload-form" action="/upload" method="post" enctype="multipart/form-data">
+                    <div class="border-2 border-dashed border-gray-700 rounded-xl p-8 text-center">
+                        <div class="flex flex-col items-center">
+                            <i class="icon-image h-16 w-16 text-gray-600 mb-4"></i>
+                            <p class="text-gray-400 mb-4">Drag & drop your files here</p>
+                            <input type="file" id="image-upload" name="image" accept="image/*" class="hidden" required>
+                            <button type="button" onclick="document.getElementById('image-upload').click()" class="px-4 py-2 bg-purple-600 text-white rounded-full hover:bg-purple-700">
+                                Choose Image
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Preview Section -->
+            <div class="bg-gray-900/80 backdrop-blur-sm p-6 rounded-2xl border border-gray-800">
+                <h3 class="text-lg font-semibold mb-4 text-gray-200 flex items-center">
+                    <i class="icon-sparkles h-5 w-5 mr-2 text-purple-500"></i>
+                    PREVIEW
+                </h3>
+                <div class="bg-gray-800 rounded-xl h-[300px] flex items-center justify-center overflow-hidden">
+                    <img id="uploaded-image" src="" alt="" class="max-w-full max-h-full object-contain hidden">
+                    <p id="preview-placeholder" class="text-gray-500">Your generated meme will appear here</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Image Context and Captions -->
+        <div id="meme-section" class="mt-8 hidden">
+            <div class="mb-8">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-semibold mb-2 text-purple-300">Image Description</h2>
+                    <div id="regenerating-indicator" class="hidden flex items-center text-purple-300">
+                        <svg class="animate-spin -ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Regenerating...
+                    </div>
+                    <button id="regenerate-context" class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors flex items-center">
+                        <svg class="regenerate-icon default" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <svg class="regenerate-icon spinning" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span id="regenerate-text">Regenerate</span>
+                    </button>
+                </div>
+                <p id="image-description" class="text-gray-300 p-4 bg-gray-800 rounded-lg"></p>
+            </div>
+
+            <div class="bg-gray-900/80 backdrop-blur-sm p-6 rounded-2xl border border-gray-800">
+                <h3 class="text-lg font-semibold mb-4 text-gray-200 flex items-center">
+                    <i class="icon-wand2 h-5 w-5 mr-2 text-purple-500"></i>
+                    GENERATED CAPTIONS
+                </h3>
+                <div class="space-y-4">
+                    <div class="caption-option">
+                        <input type="radio" name="caption" id="caption1" checked>
+                        <label for="caption1" id="caption1-text" class="text-gray-300"></label>
+                    </div>
+                    <div class="caption-option">
+                        <input type="radio" name="caption" id="caption2">
+                        <label for="caption2" id="caption2-text" class="text-gray-300"></label>
+                    </div>
+                    <div class="caption-option">
+                        <input type="radio" name="caption" id="caption3">
+                        <label for="caption3" id="caption3-text" class="text-gray-300"></label>
+                    </div>
+                </div>
+                <div class="mt-4 flex gap-4">
+                    <input type="text" id="edit-caption" placeholder="Edit selected caption" class="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white">
+                    <button id="edit-button" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Edit</button>
+                </div>
+            </div>
+
+            <!-- Generate Button -->
+            <div class="mt-8">
+                <button id="generate-meme" class="w-full py-4 bg-purple-600 text-white rounded-xl text-lg font-semibold hover:bg-purple-700 transform transition hover:scale-[1.02]">
+                    Generate Meme
+                </button>
+            </div>
+        </div>
+
+        <!-- Final Meme Section -->
+        <div id="final-meme-section" class="mt-8 hidden">
+            <div class="bg-gray-900/80 backdrop-blur-sm p-6 rounded-2xl border border-gray-800">
+                <h3 class="text-lg font-semibold mb-4 text-gray-200 flex items-center">
+                    <i class="icon-sparkles h-5 w-5 mr-2 text-purple-500"></i>
+                    YOUR MEME
+                </h3>
+                <div class="bg-gray-800 rounded-xl p-4 flex items-center justify-center">
+                    <img id="meme-result" src="" alt="Generated Meme" class="max-w-full max-h-[500px] object-contain">
+                </div>
+                <div class="mt-4 text-center">
+                    <button id="download-meme" class="px-8 py-3 bg-purple-600 text-white rounded-full hover:bg-purple-700">
+                        Download Meme
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="max-w-7xl mx-auto px-4 py-8 flex justify-between items-center border-t border-gray-800">
+        <div class="flex space-x-4 text-gray-400">
+            <button onclick="showModal('privacy-modal')" class="hover:text-purple-500">Privacy Policy</button>
+            <button onclick="showModal('terms-modal')" class="hover:text-purple-500">Terms of Use</button>
+        </div>
+        <div class="text-gray-400">
+            2025 Memento AI. All rights reserved.
+        </div>
+    </footer>
+
+    <!-- Privacy Policy Modal -->
+    <div id="privacy-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-gray-900 rounded-xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col">
+            <div class="p-6 border-b border-gray-800 flex justify-between items-center">
+                <h2 class="text-xl font-semibold text-white">Privacy Policy</h2>
+                <button onclick="hideModal('privacy-modal')" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <div class="prose prose-invert">
+                    <h3 class="text-lg font-semibold text-purple-400 mb-4">Information We Collect</h3>
+                    <p class="text-gray-300 mb-4">We collect information that you provide directly to us, including:</p>
+                    <ul class="list-disc pl-5 text-gray-300 mb-4">
+                        <li>Account information (email, name)</li>
+                        <li>Images you upload for meme generation</li>
+                        <li>Generated memes and captions</li>
+                    </ul>
+
+                    <h3 class="text-lg font-semibold text-purple-400 mb-4">How We Use Your Information</h3>
+                    <p class="text-gray-300 mb-4">We use the collected information to:</p>
+                    <ul class="list-disc pl-5 text-gray-300 mb-4">
+                        <li>Provide and improve our meme generation service</li>
+                        <li>Personalize your experience</li>
+                        <li>Communicate with you about your account</li>
+                    </ul>
+
+                    <h3 class="text-lg font-semibold text-purple-400 mb-4">Data Security</h3>
+                    <p class="text-gray-300 mb-4">We implement appropriate security measures to protect your personal information. However, no method of transmission over the Internet is 100% secure.</p>
+
+                    <h3 class="text-lg font-semibold text-purple-400 mb-4">Contact Us</h3>
+                    <p class="text-gray-300">If you have questions about this Privacy Policy, please contact us at support@mementoai.com</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Terms of Use Modal -->
+    <div id="terms-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-gray-900 rounded-xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col">
+            <div class="p-6 border-b border-gray-800 flex justify-between items-center">
+                <h2 class="text-xl font-semibold text-white">Terms of Use</h2>
+                <button onclick="hideModal('terms-modal')" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <div class="prose prose-invert">
+                    <h3 class="text-lg font-semibold text-purple-400 mb-4">Acceptance of Terms</h3>
+                    <p class="text-gray-300 mb-4">By accessing and using Memento AI's Meme Generator, you accept and agree to be bound by these Terms of Use.</p>
+
+                    <h3 class="text-lg font-semibold text-purple-400 mb-4">User Responsibilities</h3>
+                    <ul class="list-disc pl-5 text-gray-300 mb-4">
+                        <li>You must be at least 13 years old to use this service</li>
+                        <li>You are responsible for maintaining the security of your account</li>
+                        <li>You agree not to upload inappropriate or offensive content</li>
+                        <li>You retain ownership of your uploaded images</li>
+                    </ul>
+
+                    <h3 class="text-lg font-semibold text-purple-400 mb-4">Prohibited Activities</h3>
+                    <p class="text-gray-300 mb-4">You agree not to:</p>
+                    <ul class="list-disc pl-5 text-gray-300 mb-4">
+                        <li>Violate any applicable laws or regulations</li>
+                        <li>Infringe upon others' intellectual property rights</li>
+                        <li>Use the service for any illegal or unauthorized purpose</li>
+                        <li>Attempt to interfere with the service's functionality</li>
+                    </ul>
+
+                    <h3 class="text-lg font-semibold text-purple-400 mb-4">Termination</h3>
+                    <p class="text-gray-300 mb-4">We reserve the right to terminate or suspend access to our service immediately, without prior notice, for any violation of these Terms.</p>
+
+                    <h3 class="text-lg font-semibold text-purple-400 mb-4">Changes to Terms</h3>
+                    <p class="text-gray-300">We reserve the right to modify these terms at any time. Continued use of the service constitutes acceptance of updated terms.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+    <script>
+        function showModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            // Prevent body scroll when modal is open
+            document.body.style.overflow = 'hidden';
+        }
+
+        function hideModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+            // Restore body scroll
+            document.body.style.overflow = 'auto';
+        }
+
+        // Close modal when clicking outside
+        window.addEventListener('click', function(e) {
+            const privacyModal = document.getElementById('privacy-modal');
+            const termsModal = document.getElementById('terms-modal');
+            
+            if (e.target === privacyModal) {
+                hideModal('privacy-modal');
+            }
+            if (e.target === termsModal) {
+                hideModal('terms-modal');
+            }
+        });
+
+        // Previous dropdown script
+        function toggleDropdown() {
+            const dropdown = document.getElementById('dropdown-menu');
+            dropdown.classList.toggle('hidden');
+        }
+
+        // Close dropdown when clicking outside
+        window.addEventListener('click', function(e) {
+            const dropdown = document.getElementById('dropdown-menu');
+            const button = document.getElementById('user-menu-button');
+            if (!button.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
