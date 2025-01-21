@@ -51,9 +51,9 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel numpy cmake
 # Install ML-related packages first
 RUN pip install --no-cache-dir \
     tensorflow-cpu>=2.4.1 \
-    torch==1.9.0+cpu \
-    torchvision==0.10.0+cpu \
-    -f https://download.pytorch.org/whl/torch_stable.html
+    torch==2.1.2+cpu \
+    torchvision==0.16.2+cpu \
+    -f https://download.pytorch.org/whl/cpu/torch_stable.html
 
 # Install dlib from source with optimizations
 RUN git clone --depth 1 https://github.com/davisking/dlib.git && \
