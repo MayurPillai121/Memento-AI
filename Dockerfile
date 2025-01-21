@@ -10,7 +10,6 @@ RUN apt-get update && apt-get install -y \
     libxext6 \
     libxrender-dev \
     libx11-6 \
-    cmake \
     build-essential \
     git \
     wget \
@@ -19,7 +18,6 @@ RUN apt-get update && apt-get install -y \
     libopenblas-dev \
     liblapack-dev \
     pkg-config \
-    python3-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -34,9 +32,16 @@ ENV PYTHONUNBUFFERED=1 \
 # Create a non-root user
 RUN useradd -m -s /bin/bash appuser
 
-# Install packages in order of dependency
+# Install system dependencies first
+RUN apt-get update && apt-get install -y \
+    cmake \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python packages in correct order
 RUN pip install --upgrade pip && \
-    pip install cmake && \
+    pip install cmake>=3.25.0 && \
+    pip install numpy>=1.24.0 && \
     pip install dlib==19.24.1 && \
     pip install -r requirements.txt
 
