@@ -1,42 +1,31 @@
-# Web Framework
 Flask
-gunicorn
-
-# Core ML & Vision
+opencv-python-headless
 tensorflow-cpu>=2.4.1
+tensorflow-model-optimization>=0.7.0
+pillow
+transformers
+--find-links https://download.pytorch.org/whl/cpu/torch_stable.html
 torch==2.1.2+cpu
 torchvision==0.16.2+cpu
-tensorflow-hub
-tensorflow-compression>=2.8.0
-tensorflow-model-optimization>=0.7.0
-
-# Computer Vision
-opencv-python-headless
-Pillow
-mediapipe-silicon
-face-recognition-models
-dlib==19.24.1
-imutils>=0.5.4
+yolov5==6.1.0
 easyocr
 deepface
-yolov5==6.1.0
-
-# Data Science & Utils
+tensorflow-hub
 numpy>=1.18.5
 pandas>=1.1.4
-matplotlib>=3.2.2
 seaborn>=0.11.0
-scipy>=1.4.1
-scikit-learn>=0.19.2
-scikit-image>=0.19.2
+matplotlib>=3.2.2
 PyYAML>=5.3.1
+scipy>=1.4.1
 tqdm>=4.41.0
 protobuf<4.21.3
-
-# AI/NLP
-transformers
-openai>=1.0.0
-
-# Development
-python-dotenv
+scikit-learn>=0.19.2
+scikit-image>=0.19.2
+mediapipe
+face-recognition-models
 cmake
+dlib==19.24.1
+imutils>=0.5.4
+openai>=1.0.0
+python-dotenv
+tensorflow-compression>=2.8.0
