@@ -22,11 +22,6 @@ RUN apt-get update && apt-get install -y \
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 
-# Install Python packages with optimizations
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PORT=8080
-
 # Create a non-root user
 RUN useradd -m -s /bin/bash appuser
 
@@ -42,13 +37,16 @@ RUN apt-get update && apt-get install -y \
     libboost-python-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Set environment variables for dlib
+# Set environment variables for dlib and Python
 ENV CFLAGS="-O2" \
     CXXFLAGS="-O2" \
-    USE_AVX_INSTRUCTIONS=0
+    USE_AVX_INSTRUCTIONS=0 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PORT=8080
 
 # Install base Python packages
-RUN pip install --upgrade pip wheel setuptools numpy
+RUN pip install --upgrade pip wheel setuptools numpy cmake
 
 # Install dlib from source with optimizations
 RUN git clone --depth 1 https://github.com/davisking/dlib.git && \
@@ -57,13 +55,10 @@ RUN git clone --depth 1 https://github.com/davisking/dlib.git && \
     cd .. && \
     rm -rf dlib
 
-# Install remaining Python packages
-RUN pip install -r requirements.txt
-
-# Cleanup to reduce image size
-RUN apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
-    rm -rf ~/.cache/pip/*
+# Create a temporary requirements file without dlib
+RUN grep -v "^dlib==" requirements.txt > requirements_no_dlib.txt && \
+    pip install -r requirements_no_dlib.txt && \
+    rm requirements_no_dlib.txt
 
 # Change ownership of app directory
 RUN chown -R appuser:appuser /app
