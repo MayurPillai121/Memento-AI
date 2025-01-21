@@ -52,7 +52,7 @@ RUN pip install --upgrade pip wheel setuptools numpy
 # Install dlib from source with optimizations
 RUN git clone --depth 1 https://github.com/davisking/dlib.git && \
     cd dlib && \
-    python setup.py install --no-USE_AVX_INSTRUCTIONS && \
+    python setup.py install --no-avx && \
     cd .. && \
     rm -rf dlib
 
