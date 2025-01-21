@@ -1,3 +1,4 @@
+# Use Python 3.10 slim base image
 FROM python:3.10-slim
 
 WORKDIR /app
@@ -31,29 +32,27 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first to leverage Docker cache
-COPY requirements.txt .
-
-# Create a non-root user
-RUN useradd -m -s /bin/bash appuser
-
 # Set environment variables for dlib and Python
 ENV CFLAGS="-O2" \
     CXXFLAGS="-O2" \
     USE_AVX_INSTRUCTIONS=0 \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PORT=8080
+    PORT=8080 \
+    DEBIAN_FRONTEND=noninteractive
+
+# Copy requirements first to leverage Docker cache
+COPY requirements.txt .
+
+# Create a non-root user
+RUN useradd -m -s /bin/bash appuser
 
 # Install base Python packages
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel numpy cmake
 
 # Install ML-related packages first
-RUN pip install --no-cache-dir \
-    tensorflow-cpu>=2.4.1 \
-    torch==2.1.2+cpu \
-    torchvision==0.16.2+cpu \
-    -f https://download.pytorch.org/whl/cpu/torch_stable.html
+RUN pip install --no-cache-dir tensorflow-cpu>=2.4.1 && \
+    pip install --no-cache-dir torch==2.1.2+cpu torchvision==0.16.2+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
 
 # Install dlib from source with optimizations
 RUN git clone --depth 1 https://github.com/davisking/dlib.git && \
