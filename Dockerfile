@@ -43,8 +43,9 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Set environment variables for dlib
-ENV CFLAGS="-O2"
-ENV CXXFLAGS="-O2"
+ENV CFLAGS="-O2" \
+    CXXFLAGS="-O2" \
+    USE_AVX_INSTRUCTIONS=0
 
 # Install base Python packages
 RUN pip install --upgrade pip wheel setuptools numpy
@@ -52,7 +53,7 @@ RUN pip install --upgrade pip wheel setuptools numpy
 # Install dlib from source with optimizations
 RUN git clone --depth 1 https://github.com/davisking/dlib.git && \
     cd dlib && \
-    python setup.py install --no-avx && \
+    python setup.py install && \
     cd .. && \
     rm -rf dlib
 
