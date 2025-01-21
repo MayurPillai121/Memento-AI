@@ -16,17 +16,6 @@ RUN apt-get update && apt-get install -y \
     libjpeg-dev \
     libopenblas-dev \
     liblapack-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements first to leverage Docker cache
-COPY requirements.txt .
-
-# Create a non-root user
-RUN useradd -m -s /bin/bash appuser
-
-# Install system dependencies and build tools
-RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
     pkg-config \
@@ -35,7 +24,18 @@ RUN apt-get update && apt-get install -y \
     libatlas-base-dev \
     libgtk-3-dev \
     libboost-python-dev \
+    gfortran \
+    python3-setuptools \
+    python3-pip \
+    python3-wheel \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first to leverage Docker cache
+COPY requirements.txt .
+
+# Create a non-root user
+RUN useradd -m -s /bin/bash appuser
 
 # Set environment variables for dlib and Python
 ENV CFLAGS="-O2" \
@@ -46,7 +46,14 @@ ENV CFLAGS="-O2" \
     PORT=8080
 
 # Install base Python packages
-RUN pip install --upgrade pip wheel setuptools numpy cmake
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel numpy cmake
+
+# Install ML-related packages first
+RUN pip install --no-cache-dir \
+    tensorflow-cpu>=2.4.1 \
+    torch==1.9.0+cpu \
+    torchvision==0.10.0+cpu \
+    -f https://download.pytorch.org/whl/torch_stable.html
 
 # Install dlib from source with optimizations
 RUN git clone --depth 1 https://github.com/davisking/dlib.git && \
@@ -57,8 +64,31 @@ RUN git clone --depth 1 https://github.com/davisking/dlib.git && \
 
 # Create a temporary requirements file without dlib
 RUN grep -v "^dlib==" requirements.txt > requirements_no_dlib.txt && \
-    pip install -r requirements_no_dlib.txt && \
+    pip install --no-cache-dir -r requirements_no_dlib.txt && \
     rm requirements_no_dlib.txt
+
+# Install remaining packages in groups
+RUN pip install --no-cache-dir \
+    Flask \
+    opencv-python-headless \
+    pillow \
+    transformers \
+    easyocr \
+    deepface \
+    tensorflow-hub \
+    pandas>=1.1.4 \
+    matplotlib>=3.2.2 \
+    scipy>=1.4.1 \
+    tqdm>=4.41.0 \
+    protobuf<4.21.3 \
+    scikit-learn>=0.19.2 \
+    scikit-image>=0.19.2 \
+    mediapipe-silicon \
+    face-recognition-models \
+    imutils>=0.5.4 \
+    openai>=1.0.0 \
+    python-dotenv \
+    tensorflow-compression>=2.8.0
 
 # Change ownership of app directory
 RUN chown -R appuser:appuser /app
