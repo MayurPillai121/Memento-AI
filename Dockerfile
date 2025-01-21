@@ -10,14 +10,12 @@ RUN apt-get update && apt-get install -y \
     libxext6 \
     libxrender-dev \
     libx11-6 \
-    build-essential \
     git \
     wget \
     libpng-dev \
     libjpeg-dev \
     libopenblas-dev \
     liblapack-dev \
-    pkg-config \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -32,22 +30,34 @@ ENV PYTHONUNBUFFERED=1 \
 # Create a non-root user
 RUN useradd -m -s /bin/bash appuser
 
-# Install system dependencies first
+# Install system dependencies and build tools
 RUN apt-get update && apt-get install -y \
+    build-essential \
     cmake \
+    pkg-config \
     python3-dev \
+    libx11-dev \
+    libatlas-base-dev \
+    libgtk-3-dev \
+    libboost-python-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install dlib from source
-RUN git clone https://github.com/davisking/dlib.git && \
+# Set environment variables for dlib
+ENV CFLAGS="-O2"
+ENV CXXFLAGS="-O2"
+
+# Install base Python packages
+RUN pip install --upgrade pip wheel setuptools numpy
+
+# Install dlib from source with optimizations
+RUN git clone --depth 1 https://github.com/davisking/dlib.git && \
     cd dlib && \
-    python setup.py install && \
+    python setup.py install --no USE_AVX_INSTRUCTIONS && \
     cd .. && \
     rm -rf dlib
 
-# Install other Python packages
-RUN pip install --upgrade pip && \
-    pip install -r requirements.txt
+# Install remaining Python packages
+RUN pip install -r requirements.txt
 
 # Change ownership of app directory
 RUN chown -R appuser:appuser /app
