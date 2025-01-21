@@ -25,7 +25,7 @@ scikit-image>=0.19.2
 mediapipe-silicon
 face-recognition-models
 cmake
-dlib==19.24.1 --no-cache-dir
+dlib==19.24.1
 imutils>=0.5.4
 openai>=1.0.0
 python-dotenv
