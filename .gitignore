@@ -20,6 +20,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+*.pyc
 
 # Virtual Environment
 venv/
@@ -33,10 +34,17 @@ ENV/
 
 # Project specific
 .env
-uploads/
+.env.local
+.env.*.local
+uploads/*
+!uploads/.gitkeep
 *.log
 instance/
 
 # YOLO weights
 *.pt
-weights/
+weights/*
+!weights/.gitkeep
+
+# Other
+.DS_Store

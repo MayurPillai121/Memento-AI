@@ -21,6 +21,15 @@ import secrets
 # Load environment variables
 load_dotenv()
 
+# Suppress TensorFlow and CUDA warnings
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+import tensorflow as tf
+tf.get_logger().setLevel('ERROR')
+
+# Initialize TensorFlow to use CPU only
+tf.config.set_visible_devices([], 'GPU')
+
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
