@@ -52,12 +52,17 @@ RUN pip install --upgrade pip wheel setuptools numpy
 # Install dlib from source with optimizations
 RUN git clone --depth 1 https://github.com/davisking/dlib.git && \
     cd dlib && \
-    python setup.py install --no USE_AVX_INSTRUCTIONS && \
+    python setup.py install --no-USE_AVX_INSTRUCTIONS && \
     cd .. && \
     rm -rf dlib
 
 # Install remaining Python packages
 RUN pip install -r requirements.txt
+
+# Cleanup to reduce image size
+RUN apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
+    rm -rf ~/.cache/pip/*
 
 # Change ownership of app directory
 RUN chown -R appuser:appuser /app
@@ -73,11 +78,6 @@ RUN mkdir -p uploads weights
 
 # Download YOLOv5 weights (specific version)
 RUN wget -q https://github.com/ultralytics/yolov5/releases/download/v6.1/yolov5s.pt -P weights/
-
-# Cleanup to reduce image size
-RUN apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
-    rm -rf ~/.cache/pip/*
 
 # Set environment variables for production
 ENV FLASK_ENV=production \
