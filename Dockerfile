@@ -38,11 +38,15 @@ RUN apt-get update && apt-get install -y \
     python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python packages in correct order
+# Install dlib from source
+RUN git clone https://github.com/davisking/dlib.git && \
+    cd dlib && \
+    python setup.py install && \
+    cd .. && \
+    rm -rf dlib
+
+# Install other Python packages
 RUN pip install --upgrade pip && \
-    pip install cmake>=3.25.0 && \
-    pip install numpy>=1.24.0 && \
-    pip install dlib==19.24.1 && \
     pip install -r requirements.txt
 
 # Change ownership of app directory
