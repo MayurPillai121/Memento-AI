@@ -30,12 +30,14 @@ COPY requirements.txt .
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    DEBIAN_FRONTEND=noninteractive
+    DEBIAN_FRONTEND=noninteractive \
+    PORT=8080
 
 # Install packages in order of dependency
-RUN pip install --no-cache-dir cmake && \
-    pip install --no-cache-dir dlib==19.24.1 && \
-    pip install --no-cache-dir -r requirements.txt
+RUN python -m pip install --upgrade pip && \
+    python -m pip install cmake && \
+    python -m pip install dlib==19.24.1 && \
+    python -m pip install -r requirements.txt
 
 # Copy the rest of the application
 COPY . .
@@ -48,15 +50,12 @@ RUN wget -q https://github.com/ultralytics/yolov5/releases/download/v6.1/yolov5s
 
 # Cleanup to reduce image size
 RUN apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
+    rm -rf ~/.cache/pip/*
 
-# Set environment variables for runtime optimization
-ENV PYTHONPATH=/app \
-    TF_ENABLE_ONEDNN_OPTS=1 \
-    TF_CPP_MIN_LOG_LEVEL=2
+# Set environment variables for production
+ENV FLASK_ENV=production \
+    FLASK_APP=app.py
 
-# Expose the port the app runs on
-EXPOSE 5000
-
-# Command to run the application
-CMD ["python", "app.py"]
+# Use gunicorn as the production server
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 app:app
