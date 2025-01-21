@@ -24,10 +24,6 @@ RUN apt-get update && apt-get install -y \
     libatlas-base-dev \
     libgtk-3-dev \
     libboost-python-dev \
-    gfortran \
-    python3-setuptools \
-    python3-pip \
-    python3-wheel \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -45,18 +41,54 @@ ENV CFLAGS="-O2" \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=8080
 
-# Install base Python packages
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel numpy cmake
-
-# Install dlib from source with optimizations
-RUN git clone --depth 1 https://github.com/davisking/dlib.git && \
+# Install base Python packages and dlib first
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir numpy==1.24.3 cmake==3.27.7 && \
+    git clone --depth 1 https://github.com/davisking/dlib.git && \
     cd dlib && \
     python setup.py install && \
     cd .. && \
     rm -rf dlib
 
-# Install all other requirements
-RUN pip install --no-cache-dir -r requirements.txt
+# Install packages in groups to better handle dependencies
+RUN pip install --no-cache-dir \
+    Flask==3.0.0 \
+    gunicorn==21.2.0 \
+    Werkzeug==3.0.1 \
+    python-dotenv==1.0.0
+
+RUN pip install --no-cache-dir \
+    torch==2.1.2+cpu \
+    torchvision==0.16.2+cpu \
+    -f https://download.pytorch.org/whl/cpu/torch_stable.html
+
+RUN pip install --no-cache-dir \
+    tensorflow-cpu==2.14.0 \
+    tensorflow-hub==0.15.0
+
+RUN pip install --no-cache-dir \
+    opencv-python-headless==4.8.1.78 \
+    pillow==10.1.0 \
+    scipy==1.11.3 \
+    pandas==2.1.3 \
+    matplotlib==3.8.2
+
+RUN pip install --no-cache-dir \
+    scikit-learn==1.3.2 \
+    scikit-image==0.22.0 \
+    mediapipe==0.10.8 \
+    face-recognition-models==0.3.0 \
+    imutils==0.5.4
+
+RUN pip install --no-cache-dir \
+    transformers==4.35.2 \
+    easyocr==1.7.1 \
+    deepface==0.0.79 \
+    seaborn==0.13.0 \
+    PyYAML==6.0.1 \
+    tqdm==4.66.1 \
+    protobuf==3.20.3 \
+    openai==1.3.7
 
 # Change ownership of app directory
 RUN chown -R appuser:appuser /app
@@ -67,15 +99,8 @@ USER appuser
 # Copy the rest of the application
 COPY . .
 
-# Create necessary directories
-RUN mkdir -p uploads weights
+# Expose port
+EXPOSE 8080
 
-# Download YOLOv5 weights (specific version)
-RUN wget -q https://github.com/ultralytics/yolov5/releases/download/v6.1/yolov5s.pt -P weights/
-
-# Set environment variables for production
-ENV FLASK_ENV=production \
-    FLASK_APP=app.py
-
-# Use gunicorn as the production server
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 app:app
+# Command to run the application
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:app"]
