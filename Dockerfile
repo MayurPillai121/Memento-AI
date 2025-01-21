@@ -29,15 +29,22 @@ COPY requirements.txt .
 # Install Python packages with optimizations
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1 \
-    DEBIAN_FRONTEND=noninteractive \
     PORT=8080
 
+# Create a non-root user
+RUN useradd -m -s /bin/bash appuser
+
 # Install packages in order of dependency
-RUN python -m pip install --upgrade pip && \
-    python -m pip install cmake && \
-    python -m pip install dlib==19.24.1 && \
-    python -m pip install -r requirements.txt
+RUN pip install --upgrade pip && \
+    pip install cmake && \
+    pip install dlib==19.24.1 && \
+    pip install -r requirements.txt
+
+# Change ownership of app directory
+RUN chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
 
 # Copy the rest of the application
 COPY . .
