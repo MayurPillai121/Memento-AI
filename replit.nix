@@ -20,6 +20,10 @@
     ]))
     pkgs.replitPackages.prybar-python310
     pkgs.replitPackages.stderred
+    pkgs.python310Packages.pillow
+    pkgs.python310Packages.flask
+    pkgs.python310Packages.pip
+    pkgs.python310Packages.python-dotenv
   ];
   env = {
     PYTHONBIN = "${pkgs.python310}/bin/python3.10";
@@ -32,5 +36,6 @@
     ]}";
     STDERREDBIN = "${pkgs.replitPackages.stderred}/bin/stderred";
     PRYBAR_PYTHON_BIN = "${pkgs.replitPackages.prybar-python310}/bin/prybar-python310";
+    PYTHONPATH = "${pkgs.python310Packages.pillow}/lib/python3.10/site-packages:${pkgs.python310Packages.flask}/lib/python3.10/site-packages:${pkgs.python310Packages.python-dotenv}/lib/python3.10/site-packages";
   };
 }
