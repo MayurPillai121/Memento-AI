@@ -1,7 +1,6 @@
-run = "python3 app_simple.py"
+run = "pip install pillow flask python-dotenv werkzeug && python app_simple.py"
 language = "python3"
 entrypoint = "app_simple.py"
-onBoot = "pip install -r requirements-minimal.txt"
 
 [nix]
 channel = "stable-22_11"
