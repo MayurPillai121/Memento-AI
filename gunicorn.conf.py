@@ -2,16 +2,16 @@ import multiprocessing
 
 # Reduce number of workers to minimize memory usage
 workers = 1  # Single worker to reduce memory footprint
-threads = 4  # Maintain some concurrency with threads
+threads = 2  # Reduce threads to save memory
 worker_class = 'gthread'  # Use threads for concurrency
 
 # Timeouts
-timeout = 600  # 10 minutes
+timeout = 300  # 5 minutes for worker startup
 graceful_timeout = 120
 
 # Memory management
-max_requests = 100  # Restart workers periodically to clear memory
-max_requests_jitter = 10  # Add randomness to prevent all workers restarting simultaneously
+max_requests = 50  # Restart workers more frequently to clear memory
+max_requests_jitter = 5  # Add randomness to prevent all workers restarting simultaneously
 
 # Logging
 accesslog = '-'
@@ -30,5 +30,5 @@ bind = "0.0.0.0:8080"
 # Keep alive
 keep_alive = 5
 
-# Worker connections
-worker_connections = 1000
+# Worker settings
+worker_tmp_dir = '/dev/shm'  # Use memory for temp files
