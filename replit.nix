@@ -1,9 +1,10 @@
 { pkgs }: {
   deps = [
-    pkgs.python39
+    pkgs.python3
+    pkgs.python3Packages.pip
   ];
   env = {
-    PYTHONBIN = "${pkgs.python39}/bin/python3.9";
+    PYTHONBIN = "${pkgs.python3}/bin/python";
     LANG = "en_US.UTF-8";
   };
 }

@@ -1,13 +1,9 @@
-run = "python app.py"
+run = "python3 app.py"
 language = "python3"
-entrypoint = "app.py"
 
 [nix]
-channel = "stable-23_05"
-
-[deployment]
-run = ["python3", "app.py"]
-deploymentTarget = "cloudrun"
+channel = "stable-22_11"
 
 [env]
-PYTHON_VERSION = "3.9"
+PYTHONPATH = "${PYTHONPATH}:${workspaceFolder}"
+PATH = "${PYTHONPATH}:${workspaceFolder}"
