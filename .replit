@@ -3,8 +3,11 @@ language = "python3"
 entrypoint = "app.py"
 
 [nix]
-channel = "stable-22_11"
+channel = "stable-23_05"
 
 [deployment]
-run = ["sh", "-c", "python app.py"]
+run = ["python3", "app.py"]
 deploymentTarget = "cloudrun"
+
+[env]
+PYTHON_VERSION = "3.9"
