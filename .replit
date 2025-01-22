@@ -1,14 +1,10 @@
-run = "python3.10 -m pip install -r requirements.txt && python3.10 app.py"
+run = "python3 app.py"
 language = "python3"
 entrypoint = "app.py"
+onBoot = "pip install -r requirements.txt"
 
 [nix]
 channel = "stable-22_11"
 
-[deployment]
-run = ["sh", "-c", "python3.10 app.py"]
-deploymentTarget = "cloudrun"
-
 [env]
 FLASK_ENV = "development"
-PYTHONPATH = "${PYTHONPATH}:${REPL_HOME}"
