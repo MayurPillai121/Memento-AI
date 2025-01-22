@@ -1,6 +1,6 @@
-run = "python3 app.py"
+run = "python3 app_simple.py"
 language = "python3"
-entrypoint = "app.py"
+entrypoint = "app_simple.py"
 onBoot = "pip install -r requirements-minimal.txt"
 
 [nix]
