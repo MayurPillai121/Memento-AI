@@ -720,4 +720,7 @@ def generate_meme(image_path, caption):
         raise
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+    app.config['PROPAGATE_EXCEPTIONS'] = True
+    app.run(host='0.0.0.0', port=8080, threaded=True)

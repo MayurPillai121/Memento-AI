@@ -1,6 +1,10 @@
 workers = 1
 bind = "0.0.0.0:8080"
-timeout = 300
+timeout = 600
 worker_class = "sync"
-threads = 8
+threads = 4
 worker_connections = 1000
+max_requests = 100
+max_requests_jitter = 10
+graceful_timeout = 120
+keep_alive = 5
