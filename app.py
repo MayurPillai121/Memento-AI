@@ -48,12 +48,12 @@ def log_memory_usage():
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 if not client.api_key:
-    raise ValueError("OpenAI API key not found in environment variables")
+    logger.warning("OpenAI API key not found in environment variables")
 
 app = Flask(__name__)
 
 # Configuration
-UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads')
+UPLOAD_FOLDER = 'static/uploads'  # Changed to relative path for Replit
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
 
@@ -63,7 +63,8 @@ app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
 # Ensure the upload folder exists
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-app.secret_key = secrets.token_hex(16)
+# Generate a random secret key if not set in environment
+app.secret_key = os.getenv('FLASK_SECRET_KEY', secrets.token_hex(16))
 
 # Global variables for lazy loading
 face_detector = None
@@ -75,15 +76,23 @@ yolo_model = None
 def get_face_detector():
     global face_detector
     if face_detector is None:
-        from deepface import DeepFace
-        face_detector = DeepFace
+        try:
+            from deepface import DeepFace
+            face_detector = DeepFace
+        except Exception as e:
+            logger.warning(f"Failed to initialize face detector: {e}")
+            face_detector = None
     return face_detector
 
 def get_emotion_analyzer():
     global emotion_analyzer
     if emotion_analyzer is None:
-        from transformers import pipeline
-        emotion_analyzer = pipeline("text-classification", model="j-hartmann/emotion-english-distilroberta-base", top_k=None)
+        try:
+            from transformers import pipeline
+            emotion_analyzer = pipeline("text-classification", model="j-hartmann/emotion-english-distilroberta-base", top_k=None)
+        except Exception as e:
+            logger.warning(f"Failed to initialize emotion analyzer: {e}")
+            emotion_analyzer = None
     return emotion_analyzer
 
 def get_image_generator():
@@ -781,7 +790,5 @@ def generate_meme(image_path, caption):
         raise
 
 if __name__ == '__main__':
-    app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
-    app.config['PROPAGATE_EXCEPTIONS'] = True
-    app.run(debug=True, port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)

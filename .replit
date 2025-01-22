@@ -1,9 +1,16 @@
-run = "pip install pillow flask python-dotenv werkzeug && python app_simple.py"
-language = "python3"
-entrypoint = "app_simple.py"
+run = "pip install -r requirements.txt && gunicorn app:app"
+entrypoint = "app.py"
+modules = ["python-3.10:v18-20230807-322e88b"]
+
+hidden = [".pythonlibs"]
 
 [nix]
-channel = "stable-22_11"
+channel = "stable-23_05"
+
+[deployment]
+run = ["sh", "-c", "gunicorn app:app"]
+deploymentTarget = "cloudrun"
 
 [env]
-FLASK_ENV = "development"
+FLASK_ENV = "production"
+PYTHONPATH = "${PYTHONPATH}:${REPL_HOME}"
