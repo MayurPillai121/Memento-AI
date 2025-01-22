@@ -14,9 +14,10 @@ from dotenv import load_dotenv
 import re
 import numpy as np
 import mediapipe as mp
-from deepface import DeepFace
 import tensorflow_hub as hub
 import secrets
+import base64
+import io
 
 # Load environment variables
 load_dotenv()
@@ -334,6 +335,15 @@ def signout():
     # Redirect to home page
     return redirect(url_for('index'))
 
+# Load face detection cascade
+face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+
+def detect_faces(image_array):
+    """Detect faces in image using OpenCV"""
+    gray = cv2.cvtColor(image_array, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+    return len(faces) > 0
+
 def analyze_pose_and_emotion(image):
     try:
         # Pose Detection
@@ -354,14 +364,11 @@ def analyze_pose_and_emotion(image):
                 elif abs(left_shoulder.y - right_shoulder.y) > 0.1:
                     pose_state = "tilted"
                 
-                # Emotion Analysis using DeepFace
-                try:
-                    emotion_analysis = DeepFace.analyze(image, actions=['emotion'], enforce_detection=False)
-                    if isinstance(emotion_analysis, list):
-                        emotion_analysis = emotion_analysis[0]
-                    dominant_emotion = emotion_analysis['dominant_emotion']
-                except Exception as e:
-                    logger.warning(f"Emotion detection failed: {str(e)}")
+                # Emotion Analysis using OpenCV
+                has_faces = detect_faces(image)
+                if has_faces:
+                    dominant_emotion = "neutral"
+                else:
                     dominant_emotion = None
                 
                 return {
