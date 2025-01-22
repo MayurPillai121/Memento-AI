@@ -14,7 +14,6 @@ from dotenv import load_dotenv
 import re
 import numpy as np
 import mediapipe as mp
-from deepface import DeepFace
 import tensorflow_hub as hub
 import secrets
 import psutil
@@ -51,6 +50,10 @@ if not client.api_key:
     raise ValueError("OpenAI API key not found in environment variables")
 
 app = Flask(__name__)
+
+# Initialize MediaPipe solutions
+mp_face_mesh = mp.solutions.face_mesh
+mp_pose = mp.solutions.pose
 
 # Configuration
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads')
@@ -413,13 +416,42 @@ def analyze_pose_and_emotion(image):
                 elif abs(left_shoulder.y - right_shoulder.y) > 0.1:
                     pose_state = "tilted"
                 
-                # Emotion Analysis using DeepFace
+                # Emotion Analysis using MediaPipe Face Mesh
                 try:
-                    face_detector = get_face_detector()
-                    emotion_analysis = face_detector.analyze(image, actions=['emotion'])
-                    if isinstance(emotion_analysis, list):
-                        emotion_analysis = emotion_analysis[0]
-                    dominant_emotion = emotion_analysis['dominant_emotion']
+                    with mp_face_mesh.FaceMesh(
+                        static_image_mode=True,
+                        max_num_faces=1,
+                        min_detection_confidence=0.5) as face_mesh:
+                        
+                        face_results = face_mesh.process(image)
+                        
+                        if face_results.multi_face_landmarks:
+                            # Get facial landmarks
+                            landmarks = face_results.multi_face_landmarks[0]
+                            
+                            # Simple emotion detection based on facial landmarks
+                            # Calculate mouth aspect ratio
+                            mouth_top = landmarks.landmark[13]
+                            mouth_bottom = landmarks.landmark[14]
+                            mouth_ratio = abs(mouth_top.y - mouth_bottom.y)
+                            
+                            # Calculate eye aspect ratio
+                            left_eye_top = landmarks.landmark[386]
+                            left_eye_bottom = landmarks.landmark[374]
+                            right_eye_top = landmarks.landmark[159]
+                            right_eye_bottom = landmarks.landmark[145]
+                            eye_ratio = (abs(left_eye_top.y - left_eye_bottom.y) + 
+                                       abs(right_eye_top.y - right_eye_bottom.y)) / 2
+                            
+                            # Simple emotion classification based on ratios
+                            if mouth_ratio > 0.1:  # Large mouth opening
+                                dominant_emotion = "happy"
+                            elif eye_ratio < 0.02:  # Small eye opening
+                                dominant_emotion = "neutral"
+                            else:
+                                dominant_emotion = "neutral"
+                        else:
+                            dominant_emotion = None
                 except Exception as e:
                     logger.warning(f"Emotion detection failed: {str(e)}")
                     dominant_emotion = None
