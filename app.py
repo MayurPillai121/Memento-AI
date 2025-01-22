@@ -14,10 +14,10 @@ from dotenv import load_dotenv
 import re
 import numpy as np
 import mediapipe as mp
+from deepface import DeepFace
 import tensorflow_hub as hub
 import secrets
-import base64
-import io
+import psutil
 
 # Load environment variables
 load_dotenv()
@@ -34,6 +34,15 @@ tf.config.set_visible_devices([], 'GPU')
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+def log_memory_usage():
+    process = psutil.Process(os.getpid())
+    mem_info = process.memory_info()
+    logger.info(f"Memory Usage - RSS: {mem_info.rss / 1024 / 1024:.2f}MB, VMS: {mem_info.vms / 1024 / 1024:.2f}MB")
 
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
@@ -56,8 +65,57 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app.secret_key = secrets.token_hex(16)
 
+# Global variables for lazy loading
+face_detector = None
+emotion_analyzer = None
+image_generator = None
+scene_model = None
+yolo_model = None
+
+def get_face_detector():
+    global face_detector
+    if face_detector is None:
+        from deepface import DeepFace
+        face_detector = DeepFace
+    return face_detector
+
+def get_emotion_analyzer():
+    global emotion_analyzer
+    if emotion_analyzer is None:
+        from transformers import pipeline
+        emotion_analyzer = pipeline("text-classification", model="j-hartmann/emotion-english-distilroberta-base", top_k=None)
+    return emotion_analyzer
+
+def get_image_generator():
+    global image_generator
+    if image_generator is None:
+        from transformers import pipeline
+        image_generator = pipeline("image-to-text", model="Salesforce/blip-image-captioning-base")
+    return image_generator
+
+def get_scene_model():
+    global scene_model
+    if scene_model is None:
+        scene_model = tf.keras.models.load_model('scene_model.h5')
+    return scene_model
+
+def get_yolo_model():
+    global yolo_model
+    if yolo_model is None:
+        yolo_model = torch.hub.load('ultralytics/yolov5', 'yolov5x', pretrained=True)
+    return yolo_model
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.before_request
+def before_request():
+    log_memory_usage()
+
+@app.after_request
+def after_request(response):
+    log_memory_usage()
+    return response
 
 @app.route('/')
 def index():
@@ -335,15 +393,6 @@ def signout():
     # Redirect to home page
     return redirect(url_for('index'))
 
-# Load face detection cascade
-face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-
-def detect_faces(image_array):
-    """Detect faces in image using OpenCV"""
-    gray = cv2.cvtColor(image_array, cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(gray, 1.1, 4)
-    return len(faces) > 0
-
 def analyze_pose_and_emotion(image):
     try:
         # Pose Detection
@@ -364,11 +413,15 @@ def analyze_pose_and_emotion(image):
                 elif abs(left_shoulder.y - right_shoulder.y) > 0.1:
                     pose_state = "tilted"
                 
-                # Emotion Analysis using OpenCV
-                has_faces = detect_faces(image)
-                if has_faces:
-                    dominant_emotion = "neutral"
-                else:
+                # Emotion Analysis using DeepFace
+                try:
+                    face_detector = get_face_detector()
+                    emotion_analysis = face_detector.analyze(image, actions=['emotion'])
+                    if isinstance(emotion_analysis, list):
+                        emotion_analysis = emotion_analysis[0]
+                    dominant_emotion = emotion_analysis['dominant_emotion']
+                except Exception as e:
+                    logger.warning(f"Emotion detection failed: {str(e)}")
                     dominant_emotion = None
                 
                 return {
@@ -393,6 +446,7 @@ def analyze_scene(image_rgb):
         input_image = tf.expand_dims(input_image, 0)
         
         # Get scene predictions
+        scene_model = get_scene_model()
         predictions = scene_model(input_image)
         scene_score = tf.nn.softmax(predictions[0])
         predicted_class = tf.argmax(scene_score)
@@ -412,11 +466,11 @@ def analyze_scene(image_rgb):
 def process_image(filepath):
     try:
         # Load YOLOv5 model with optimized settings
-        model = torch.hub.load('ultralytics/yolov5', 'yolov5x', pretrained=True)
-        model.conf = 0.5   # Increased base confidence threshold
-        model.iou = 0.45   # IOU threshold for NMS
-        model.classes = None  # Detect all classes
-        model.max_det = 20  # Maximum number of detections per image
+        yolo_model = get_yolo_model()
+        yolo_model.conf = 0.5   # Increased base confidence threshold
+        yolo_model.iou = 0.45   # IOU threshold for NMS
+        yolo_model.classes = None  # Detect all classes
+        yolo_model.max_det = 20  # Maximum number of detections per image
         
         # Read image
         image = cv2.imread(filepath)
@@ -427,7 +481,7 @@ def process_image(filepath):
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
         # Get predictions with augmentation
-        results = model(image_rgb, augment=True)  # Enable test-time augmentation
+        results = yolo_model(image_rgb, augment=True)  # Enable test-time augmentation
         
         # Extract detected objects with confidence scores
         detected_objects = []
