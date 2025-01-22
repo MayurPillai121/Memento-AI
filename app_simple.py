@@ -1,6 +1,5 @@
 from flask import Flask, render_template, request, send_file, send_from_directory, jsonify
 from werkzeug.utils import secure_filename
-from openai import OpenAI
 from PIL import Image, ImageDraw, ImageFont
 import os
 from dotenv import load_dotenv
@@ -12,12 +11,6 @@ load_dotenv()
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Initialize OpenAI client
-client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-
-if not client.api_key:
-    raise ValueError("OpenAI API key not found in environment variables")
 
 app = Flask(__name__)
 
@@ -61,11 +54,13 @@ def upload_file():
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
             
-            # Generate simple description
+            # Generate simple description and captions
             description = "An image ready for meme creation"
-            
-            # Generate captions
-            captions = generate_captions(description)
+            captions = [
+                "When you finally deploy your app on Replit",
+                "Debug mode: activated",
+                "It ain't much, but it's honest work"
+            ]
             
             return jsonify({
                 'success': True,
@@ -77,42 +72,6 @@ def upload_file():
     except Exception as e:
         logger.error(f'Error processing upload: {str(e)}')
         return jsonify({'error': 'Internal server error'}), 500
-
-def generate_captions(description):
-    try:
-        messages = [
-            {
-                "role": "system",
-                "content": """You are a meme caption generator. Create three funny, engaging captions."""
-            },
-            {
-                "role": "user",
-                "content": f"Generate three funny captions for: {description}"
-            }
-        ]
-
-        response = client.chat.completions.create(
-            model="gpt-4",
-            messages=messages,
-            max_tokens=100,
-            temperature=0.8
-        )
-        
-        captions = response.choices[0].message.content.strip().split('\n')
-        # Clean up and ensure we have exactly 3 captions
-        captions = [c.strip().lstrip('123.)-') for c in captions if c.strip()][:3]
-        while len(captions) < 3:
-            captions.append("Caption generation error")
-            
-        return captions
-        
-    except Exception as e:
-        logger.error(f'Error generating captions: {str(e)}')
-        return [
-            "Error generating captions",
-            "Please try again",
-            "Our meme lords are taking a break"
-        ]
 
 @app.route('/generate-meme', methods=['POST'])
 def create_meme():
@@ -154,7 +113,7 @@ def create_meme():
                 
                 for word in words:
                     current_line.append(word)
-                    w, h = draw.textsize(' '.join(current_line), font=font)
+                    w = draw.textlength(' '.join(current_line), font=font)
                     if w > W * 0.9:
                         if len(current_line) > 1:
                             lines.append(' '.join(current_line[:-1]))
@@ -172,7 +131,7 @@ def create_meme():
                 
                 # Draw each line
                 for line in lines:
-                    w, h = draw.textsize(line, font=font)
+                    w = draw.textlength(line, font=font)
                     x = (W - w) / 2
                     
                     # Draw text outline
