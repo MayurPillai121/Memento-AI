@@ -6,4 +6,6 @@ channel = "stable-22_11"
 
 [env]
 PYTHONPATH = "${PYTHONPATH}:${workspaceFolder}"
-PATH = "${PYTHONPATH}:${workspaceFolder}"
+
+[gitHubImport]
+requiredFiles = [".replit", "replit.nix", "requirements.txt"]
